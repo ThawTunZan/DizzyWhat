@@ -1,5 +1,9 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, globalShortcut } = require('electron');
 const path = require('node:path');
+require("electron-reload")(__dirname)
+
+let mainWindow;
+let isClickThrough = true; // Start as click-through
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -8,19 +12,30 @@ if (require('electron-squirrel-startup')) {
 
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+  mainWindow = new BrowserWindow({
+    width: 200, height: 100,
+    maxHeight:100, minHeight:100,
+    maxWidth:200, minWidth:200,
+    frame:false,
+    autoHideMenuBar: true,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: __dirname + "\\preload.js"
     },
+    transparent: true,
+    alwaysOnTop: true,
+    type: "toolbar", // or "notification"
+    focusable: false,
   });
 
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  //mainWindow.webContents.openDevTools();
+  mainWindow.setTitle('');
+
+  // Start as click-through
+  mainWindow.setIgnoreMouseEvents(true, { forward: true });
 };
 
 // This method will be called when Electron has finished
@@ -29,6 +44,16 @@ const createWindow = () => {
 app.whenReady().then(() => {
   createWindow();
 
+  // Register global shortcut: Ctrl+Shift+D
+  globalShortcut.register('Control+Shift+D', () => {
+    isClickThrough = !isClickThrough;
+    if (isClickThrough) {
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    } else {
+      mainWindow.setIgnoreMouseEvents(false);
+    }
+  });
+
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   app.on('activate', () => {
@@ -36,6 +61,10 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

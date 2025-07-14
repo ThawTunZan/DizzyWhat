@@ -1,7 +1,25 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
-  margin: auto;
-  max-width: 38rem;
-  padding: 2rem;
+  -webkit-app-region:drag;
+  background-color: transparent;
+  display: flex;
+  cursor: pointer;
+  justify-content: space-between;
+  color: #edff14;
+  user-select: none;
+}
+
+#close{
+  padding: 5px;
+  font-size: 0.8em;
+  color: grey;
+  -webkit-app-region: no-drag;
+}
+
+#close:hover {
+  color: #14ff62
 }
