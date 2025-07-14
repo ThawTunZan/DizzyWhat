@@ -11,6 +11,8 @@ body {
   justify-content: space-between;
   color: #edff14;
   user-select: none;
+  position: relative;
+  overflow: hidden;
 }
 
 #close{
@@ -22,4 +24,11 @@ body {
 
 #close:hover {
   color: #14ff62
+}
+
+#mainText {
+  position: absolute;
+  left: 100px;
+  top: 100px;
+  transition: left 0.05s linear, top 0.05s linear;
 }

@@ -1,6 +1,52 @@
 const { app, BrowserWindow, globalShortcut } = require('electron');
-const path = require('node:path');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 require("electron-reload")(__dirname)
+const WebSocket = require('ws');
+
+// ─── 1) HTTPS SERVER ─────────────────────────────────────────────────
+const https = require('https');
+const fs    = require('fs');
+const express = require('express');
+const httpApp = express();
+
+httpApp.use(express.static(__dirname));
+
+// Serve /ip.json for frontend config
+httpApp.get('/ip.json', (req, res) => {
+  res.json({ IP_ADDRESS: process.env.IP_ADDRESS || 'localhost' });
+});
+
+const options = {
+  key:  fs.readFileSync(path.join(__dirname,'certs','key.pem')),
+  cert: fs.readFileSync(path.join(__dirname,'certs','cert.pem')),
+};
+
+const server = https.createServer(options, httpApp);
+
+const wss = new WebSocket.Server({ server });
+
+wss.on('connection', ws => {
+  console.log('📱 Phone connected');
+  ws.on('message', msg => {
+    try {
+      const { ax, ay } = JSON.parse(msg);
+      //console.log(`ax=${ax}, ay=${ay}` )
+      if (mainWindow) {
+        mainWindow.webContents.send('motion-data', msg.toString());
+      }
+    } catch (e) {
+      console.error('Invalid motion data', e);
+    }
+  });
+  ws.on('close', () => console.log('📱 Phone disconnected'));
+});
+
+const IP = process.env.IP_ADDRESS || 'localhost';
+
+server.listen(3000, () => {
+  console.log(`HTTPS & WSS server at https://${IP}:3000`);
+});
 
 let mainWindow;
 let isClickThrough = true; // Start as click-through
@@ -13,13 +59,14 @@ if (require('electron-squirrel-startup')) {
 const createWindow = () => {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 200, height: 100,
-    maxHeight:100, minHeight:100,
-    maxWidth:200, minWidth:200,
+    //width: 200, height: 100,
+    width: 800, height: 600,
+    //maxHeight:100, minHeight:100,
+    //maxWidth:200, minWidth:200,
     frame:false,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: __dirname + "\\preload.js"
+      preload: path.join(__dirname, "preload.js")
     },
     transparent: true,
     alwaysOnTop: true,
@@ -75,6 +122,3 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.

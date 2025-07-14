@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gyroscope Sender</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    button {
+      padding: 0.5em 1em;
+      font-size: 1rem;
+      margin-bottom: 1em;
+    }
+    #status { font-size: 0.9rem; color: #555; }
+  </style>
+</head>
+<body>
+  <button id="enable">Enable Motion</button>
+  <p id="status">Waiting for you to enable…</p>
+
+  <script>
+    // Fetch the IP address from the server (served from .env)
+    fetch('/ip.json')
+      .then(res => res.json())
+      .then(config => {
+        const WS_URL = `wss://${config.IP_ADDRESS}:3000`;
+        const status = document.getElementById('status');
+        const enableBtn = document.getElementById('enable');
+
+        enableBtn.addEventListener('click', async () => {
+          // iOS 13+ permission
+          if (typeof DeviceMotionEvent !== 'undefined' &&
+              typeof DeviceMotionEvent.requestPermission === 'function') {
+            try {
+              const res = await DeviceMotionEvent.requestPermission();
+              if (res !== 'granted') {
+                status.textContent = 'Permission denied';
+                return;
+              }
+            } catch (err) {
+              status.textContent = 'Permission prompt failed';
+              return;
+            }
+          }
+
+          enableBtn.style.display = 'none';
+          status.textContent = 'Connecting WebSocket…';
+
+          const ws = new WebSocket(WS_URL);
+          ws.addEventListener('open', () => {
+            status.textContent = 'Connected—sending motion data...';
+            window.addEventListener('devicemotion', evt => {
+              const msg = {
+                ax: evt.accelerationIncludingGravity.x,
+                ay: evt.accelerationIncludingGravity.y
+              };
+              ws.send(JSON.stringify(msg));
+            });
+          });
+          ws.addEventListener('error', () => {
+            status.textContent = 'WebSocket error';
+          });
+          ws.addEventListener('close', () => {
+            status.textContent = 'WebSocket closed';
+          });
+        });
+      });
+  </script>
+</body>
+</html>
